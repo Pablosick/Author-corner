@@ -44,12 +44,26 @@ ul.mainmenu li.last {
 	float: right
 }
 
-u1.mainmenu li a{
+ul.mainmenu li a{
 	color: #fdc073;
 	text-decoration: none;
 }
 
 ul.mainmenu li a:hover {
+	color: #FDA83D;
+}
+
+ul.mainmenu li.log{
+	float: right;
+	margin: 18px 40px 0 50px;
+}
+
+ul.mainmenu li.log a{
+	color: #fdc073;
+	text-decoration: none;
+}
+
+ul.mainmenu li.log a:hover {
 	color: #FDA83D;
 }
 
