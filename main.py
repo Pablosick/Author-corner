@@ -11,7 +11,7 @@ SECRET_KEY = '5gR2k8kngo0usagPZ3'
 
 
 app = Flask(__name__)
-# app.config['SECRET_KEY'] = 'zlGK5teFsXX4e3jfyO'
+app.config['SECRET_KEY'] = 'zlGK5teFsXX4e3jfyO'
 app.config.from_object(__name__)
 
 app.config.update(dict(DATABASE=os.path.join(app.root_path,'fslite.db')))
@@ -50,50 +50,76 @@ reg_a_log = [{"name": "Вход", "url": "/entry-preson"},
 
 @app.route('/')
 def index():
+    print(request.form)
     db = get_db()
     database = FDatabase(db)
     return render_template('index.html', title='Backend на Flask', menu=database.getMenu(), login=reg_a_log)
 
 
+@app.route('/article-flask', methods=["POST", "GET"])
+def articleFlask():
+    db = get_db()
+    database = FDatabase(db)
+
+    if request.method == "POST":
+        if len(request.form['name']) > 4 and len(request.form['post']) > 10:
+            res = database.addPost(request.form['name'], request.form['post'])
+            if not res:
+                flash('Ошибка добавления статьи', category='error')
+            else:
+                flash('Статья добавлена успешно', category='success')
+        else:
+            flash('Ошибка добавления статьи', category='error')
+
+    render_template('add_post.html', title='Добавление статьи', menu=database.getMenu(), login=reg_a_log)
+
 @app.route('/contact', methods=["POST", "GET"]) #Если не указать метод POST, то на кнопку отправить будет ошибка 405. Сервер получает запрос, но не может его реализовать
 def contact():
-   if request.method == "POST":
+    db = get_db()
+    database = FDatabase(db)
+    if request.method == "POST":
        if len(request.form['username']) > 2:
            flash('Сообщение отправлено', category='success')
        else:
            flash('Ошибка отправки', category='error')
 
-   return render_template('contact.html', title='Обратная связь', menu=menu, login=reg_a_log)
+    return render_template('contact.html', title='Обратная связь', menu=database.getMenu(), login=reg_a_log)
 
 
 @app.route('/login', methods=["POST", "GET"])
 def login():
-   if 'user' in session:
+    db = get_db()
+    database = FDatabase(db)
+    if 'user' in session:
        return redirect(url_for('profile', username=session['user']))
-   elif request.method == 'POST' and request.form['username'] == 'test' and request.form['psw'] == "123":
+    elif request.method == 'POST' and request.form['username'] == 'test' and request.form['psw'] == "123":
         session['user'] = request.form['username']  # connect session
         return redirect(url_for('profile', username=session['user']))
-   return render_template('login.html', title='Авторизация', menu=menu, login=reg_a_log)
+    return render_template('login.html', title='Авторизация', menu=database.getMenu(), login=reg_a_log)
 
 
 @app.route('/profile/<username>')
 def profile(username):
-   if 'user' not in session or session['user'] != username:
+    db = get_db()
+    database = FDatabase(db)
+    if 'user' not in session or session['user'] != username:
         abort(401)  # Unauthorized  user (Прерывание запроса)
-   return render_template('profile.html', title=f'Профиль пользователя {username}', menu=menu, login=reg_a_log)
+    return render_template('profile.html', title=f'Профиль пользователя {username}', menu=database.getMenu(), login=reg_a_log)
 
 @app.errorhandler(404)
 def pageNotFount(error):
-   return render_template('page404.html', title="Страница не найдена", menu=menu, login=reg_a_log)
+    db = get_db()
+    database = FDatabase(db)
+    return render_template('page404.html', title="Страница не найдена", menu=database.getMenu(), login=reg_a_log)
 
 @app.teardown_appcontext
 def close_db(error):
     """Закрываем соединение с БД, если оно было установленно"""
     if hasattr(g,'link_db'):
-       g.link_db.close()
+        g.link_db.close()
 
 if __name__ == "__main__":
-    app.run(debug=True)
+        app.run(debug=True)
 
 
 
