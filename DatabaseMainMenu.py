@@ -4,11 +4,12 @@ class FDatabase(object):
         self.__cur = db.cursor()
 
     def getMenu(self):
-        sql = '''SELECT * FROM mainmenu'''
+        sql = """SELECT * FROM mainmenu"""
         try:
             self.__cur.execute(sql)
             res = self.__cur.fetchall()
-            if res: return res
+            if res:
+                return res
         except:
             print("Ошибки чтения из БД")
         return []

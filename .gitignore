@@ -1,0 +1,11 @@
+#Virtual env
+venv
+
+#cache
+*__pycache__
+
+#settings project
+.idea/
+
+#init
+__init__.py
