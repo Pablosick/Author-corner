@@ -14,14 +14,14 @@ from flask import (
 from DatabaseMainMenu import FDatabase
 
 
-# Configuration Database
-DATABASE = "/tmp/fslite.db"
-DEBUG = True
-SECRET_KEY = "5gR2k8kngo0usagPZ3"
+# Configuration WSGI-application
+
+DATABASE = os.getenv("DATABASE")
+DEBUG = os.getenv("DEBUG")
+SECRET_KEY = os.getenv("SECRET_KEY")
 
 
 app = Flask(__name__)
-app.config["SECRET_KEY"] = "zlGK5teFsXX4e3jfyO"
 app.config.from_object(__name__)
 
 app.config.update(dict(DATABASE=os.path.join(app.root_path, "fslite.db")))

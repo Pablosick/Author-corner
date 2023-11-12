@@ -9,3 +9,6 @@ venv
 
 #init
 __init__.py
+
+#.env
+.env
