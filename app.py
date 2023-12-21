@@ -13,6 +13,7 @@ from flask import (
 )
 from DatabaseMainMenu import FDatabase
 
+from uuid import uuid4
 
 # Configuration WSGI-application
 
@@ -24,6 +25,9 @@ SECRET_KEY = os.getenv("SECRET_KEY")
 app = Flask(__name__)
 app.config.from_object(__name__)
 
+# Secret-key for session
+app.config['SECRET_KEY'] = str(uuid4())
+
 app.config.update(dict(DATABASE=os.path.join(app.root_path, "fslite.db")))
 
 
@@ -34,7 +38,7 @@ def connect_db():
 
 
 def create_db():
-    """Вспомогательная функция для создания таблиц БД"""
+    """Вспомогательная функция для создания таблиц БД. Чтение SQL запросов из файла"""
     db = connect_db()
     with app.open_resource("sq_db.sql", mode="r") as f:
         db.cursor().executescript(f.read())
@@ -49,26 +53,15 @@ def get_db():
     return g.link_db
 
 
-menu = [
-    {"name": "Главная", "url": "/"},
-    {"name": "Статьи", "url": "/article-flask"},
-    {"name": "Обратная связь", "url": "/contact"},
-]
-
-reg_a_log = [
-    {"name": "Вход", "url": "/entry-preson"},
-    {"name": "Авторизация", "url": "/login"},
-]
-
-
 @app.route("/")
 def index():
-    print(request.form)
     db = get_db()
     database = FDatabase(db)
     return render_template(
-        "index.html", title="Backend на Flask", menu=database.getMenu(), login=reg_a_log
-    )
+        "index.html", title="Список статей",
+        menu=database.get_menu([1, 3]),
+        login=database.get_menu([4, 5]),
+        posts=database.get_all_post())
 
 
 @app.route("/article-flask", methods=["POST", "GET"])
@@ -78,7 +71,7 @@ def articleFlask():
 
     if request.method == "POST":
         if len(request.form["name"]) > 4 and len(request.form["post"]) > 10:
-            res = database.addPost(request.form["name"], request.form["post"])
+            res = database.add_post(request.form["name"], request.form["post"])
             if not res:
                 flash("Ошибка добавления статьи", category="error")
             else:
@@ -89,14 +82,12 @@ def articleFlask():
     return render_template(
         "add_post.html",
         title="Добавление статьи",
-        menu=database.getMenu(),
-        login=reg_a_log,
+        menu=database.get_menu([1, 3]),
+        login=database.get_menu([4, 5]),
     )
 
 
-@app.route(
-    "/contact", methods=["POST", "GET"]
-)  # Если не указать метод POST, то на кнопку отправить будет ошибка 405. Сервер получает запрос, но не может его реализовать
+@app.route("/contact", methods=["POST", "GET"])  # Если не указать метод POST, то на кнопку отправить будет ошибка 405. Сервер получает запрос, но не может его реализовать
 def contact():
     db = get_db()
     database = FDatabase(db)
@@ -107,7 +98,7 @@ def contact():
             flash("Ошибка отправки", category="error")
 
     return render_template(
-        "contact.html", title="Обратная связь", menu=database.getMenu(), login=reg_a_log
+        "contact.html", title="Обратная связь", menu=database.get_menu([1, 3]), login=database.get_menu([4, 5])
     )
 
 
@@ -115,17 +106,17 @@ def contact():
 def login():
     db = get_db()
     database = FDatabase(db)
-    if "user" in session:
-        return redirect(url_for("profile", username=session["user"]))
+    if "userLogged" in session:
+        return redirect(url_for("profile", username=session["userLogged"]))
     elif (
         request.method == "POST"
         and request.form["username"] == "test"
         and request.form["psw"] == "123"
     ):
-        session["user"] = request.form["username"]  # connect session
-        return redirect(url_for("profile", username=session["user"]))
+        session["userLogged"] = request.form["username"]  # connect session
+        return redirect(url_for("profile", username=session["userLogged"]))
     return render_template(
-        "login.html", title="Авторизация", menu=database.getMenu(), login=reg_a_log
+        "login.html", title="Авторизация", menu=database.get_menu([1, 3]), login=database.get_menu([4, 5])
     )
 
 
@@ -133,13 +124,13 @@ def login():
 def profile(username):
     db = get_db()
     database = FDatabase(db)
-    if "user" not in session or session["user"] != username:
+    if "userLogged" not in session or session["userLogged"] != username:
         abort(401)  # Unauthorized  user (Прерывание запроса)
     return render_template(
         "profile.html",
         title=f"Профиль пользователя {username}",
-        menu=database.getMenu(),
-        login=reg_a_log,
+        menu=database.get_menu([1, 3]),
+        login=database.get_menu([4, 5]),
     )
 
 
@@ -150,9 +141,24 @@ def pageNotFount(error):
     return render_template(
         "page404.html",
         title="Страница не найдена",
-        menu=database.getMenu(),
-        login=reg_a_log,
+        menu=database.get_menu([1, 3]),
+        login=database.get_menu([4, 5]),
     )
+
+
+@app.route("/post/<title_post>")
+def show_post(title_post):
+    db = get_db()
+    database = FDatabase(db)
+    post = database.get_post(title_post)
+    if not post:
+        abort(401)
+    return render_template(
+        "post.html",
+        title=title_post,
+        menu=database.get_menu([1, 3]),
+        login=database.get_menu([4, 5]),
+        post=post)
 
 
 @app.teardown_appcontext

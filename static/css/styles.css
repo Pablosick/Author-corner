@@ -8,7 +8,7 @@ html, body{
 
 
 a {
-	color: #fa8900;
+	color: #229af1;
 	text-decoration: none;
 }
 
@@ -24,11 +24,10 @@ a:hover {
 
 ul.mainmenu {
 	list-style: none;
-	background: #494847fc;
+	background: #134afa;
 	height: 60px;
 	margin: 0; 
 	padding: 0;
-	color: #c97207;
 	font-size: 20px;
 	overflow : hidden;
 }
@@ -45,12 +44,12 @@ ul.mainmenu li.last {
 }
 
 ul.mainmenu li a{
-	color: #fdc073;
+	color: #ffffff;
 	text-decoration: none;
 }
 
 ul.mainmenu li a:hover {
-	color: #FDA83D;
+	color: #8ee0e5;
 }
 
 ul.mainmenu li.log{
@@ -59,12 +58,12 @@ ul.mainmenu li.log{
 }
 
 ul.mainmenu li.log a{
-	color: #fdc073;
+	color: #ffffff;
 	text-decoration: none;
 }
 
 ul.mainmenu li.log a:hover {
-	color: #FDA83D;
+	color: #8ee0e5;
 }
 
 div.content {
@@ -96,4 +95,46 @@ div.content {
 	border: 1px solid #990606;
 	background: #f7363d
 }
-	
+
+.footer {
+    display: flex;
+    align-items: center;
+    position: absolute;
+    background: #134afa;
+    position: absolute;
+    left: 0;
+    bottom: 0;
+    width: 100%;
+    height: 80px;
+
+}
+
+.text_for_footer {
+    color: #ffffff;
+    font-family: 'Arial';
+    font-size: 15px;
+    padding: 10px 20px;
+}
+
+ul.list-posts {
+    list-style: none;
+    margin: 0;
+    padding: 0
+    max-width: 600px;
+}
+
+ul.list-posts li {
+    margin: 20px 0 0 0;
+    border: 1px solid #eee;
+}
+
+ul.list-posts .title {
+    margin: 0;
+    padding: 5px;
+    background: #eee;
+}
+
+ul.list-posts .announce {
+    margin: 0;
+    padding: 10px, 5px, 10px, 5px;
+}
