@@ -11,7 +11,11 @@ from flask import (
     abort,
     g,
 )
+from werkzeug.security import generate_password_hash, check_password_hash
 from DatabaseMainMenu import FDatabase
+from UserLogin import UserLogin
+
+from flask_login import LoginManager, login_user, login_required
 
 from uuid import uuid4
 
@@ -29,6 +33,14 @@ app.config.from_object(__name__)
 app.config['SECRET_KEY'] = str(uuid4())
 
 app.config.update(dict(DATABASE=os.path.join(app.root_path, "fslite.db")))
+
+login_manager = LoginManager(app)
+
+
+@login_manager.user_loader
+def load_user(user_id):
+    print("load user")
+    return UserLogin().from_db(user_id, g.database)
 
 
 def connect_db():
@@ -53,25 +65,27 @@ def get_db():
     return g.link_db
 
 
+@app.before_request
+def accessing_the_database():
+    g.db = get_db()
+    g.database = FDatabase(g.db)
+
+
 @app.route("/")
 def index():
-    db = get_db()
-    database = FDatabase(db)
     return render_template(
         "index.html", title="Список статей",
-        menu=database.get_menu([1, 3]),
-        login=database.get_menu([4, 5]),
-        posts=database.get_all_post())
+        menu=g.database.get_menu([1, 3]),
+        login=g.database.get_menu([4, 5]),
+        posts=g.database.get_all_post()
+    )
 
 
 @app.route("/article-flask", methods=["POST", "GET"])
 def articleFlask():
-    db = get_db()
-    database = FDatabase(db)
-
     if request.method == "POST":
         if len(request.form["name"]) > 4 and len(request.form["post"]) > 10:
-            res = database.add_post(request.form["name"], request.form["post"])
+            res = g.database.add_post(request.form["name"], request.form["post"], request.form["url"])
             if not res:
                 flash("Ошибка добавления статьи", category="error")
             else:
@@ -82,15 +96,13 @@ def articleFlask():
     return render_template(
         "add_post.html",
         title="Добавление статьи",
-        menu=database.get_menu([1, 3]),
-        login=database.get_menu([4, 5]),
+        menu=g.database.get_menu([1, 3]),
+        login=g.database.get_menu([4, 5]),
     )
 
 
 @app.route("/contact", methods=["POST", "GET"])  # Если не указать метод POST, то на кнопку отправить будет ошибка 405. Сервер получает запрос, но не может его реализовать
 def contact():
-    db = get_db()
-    database = FDatabase(db)
     if request.method == "POST":
         if len(request.form["username"]) > 2:
             flash("Сообщение отправлено", category="success")
@@ -98,67 +110,100 @@ def contact():
             flash("Ошибка отправки", category="error")
 
     return render_template(
-        "contact.html", title="Обратная связь", menu=database.get_menu([1, 3]), login=database.get_menu([4, 5])
+        "contact.html",
+        title="Обратная связь",
+        menu=g.database.get_menu([1, 3]),
+        login=g.database.get_menu([4, 5])
     )
 
 
 @app.route("/login", methods=["POST", "GET"])
 def login():
-    db = get_db()
-    database = FDatabase(db)
-    if "userLogged" in session:
-        return redirect(url_for("profile", username=session["userLogged"]))
-    elif (
-        request.method == "POST"
-        and request.form["username"] == "test"
-        and request.form["psw"] == "123"
-    ):
-        session["userLogged"] = request.form["username"]  # connect session
-        return redirect(url_for("profile", username=session["userLogged"]))
+    if request.method == "POST":
+        user = g.database.get_user_by_email(request.form['username'])
+        if user and check_password_hash(user['psw'], request.form['psw']):
+            user_login = UserLogin().create(user)
+            login_user(user_login)
+            return redirect(url_for('index'))
+
+        flash("Неверная пара логин/пароль", "error")
     return render_template(
-        "login.html", title="Авторизация", menu=database.get_menu([1, 3]), login=database.get_menu([4, 5])
+        "login.html",
+        title="Авторизация",
+        menu=g.database.get_menu([1, 3]),
+        login=g.database.get_menu([4, 5])
+    )
+
+
+@app.route("/signup", methods=["POST", "GET"])
+def register():
+    if request.method == "POST":
+        if (len(request.form["firstname"]) > 4 and len(request.form["email"]) > 4
+                and len(request.form["psw"]) > 4 and request.form["repeat_psw"] == request.form["psw"]):
+            hash_psw = generate_password_hash(request.form["psw"])
+            res = g.database.user_registration(request.form["firstname"], request.form["email"], hash_psw)
+            if res:
+                flash("Вы успешно зарегистрированы", "success")
+                return redirect(url_for("login"))
+            else:
+                flash("Ошибка при добавлении в БД", "error")
+        else:
+            flash("Ошибка введенных данных", "error")
+    return render_template(
+        "sing_up.html",
+        title="Регистрация",
+        menu=g.database.get_menu([1, 3]),
+        login=g.database.get_menu([4, 5])
     )
 
 
 @app.route("/profile/<username>")
 def profile(username):
-    db = get_db()
-    database = FDatabase(db)
     if "userLogged" not in session or session["userLogged"] != username:
         abort(401)  # Unauthorized  user (Прерывание запроса)
     return render_template(
         "profile.html",
         title=f"Профиль пользователя {username}",
-        menu=database.get_menu([1, 3]),
-        login=database.get_menu([4, 5]),
+        menu=g.database.get_menu([1, 3]),
+        login=g.database.get_menu([4, 5]),
     )
 
 
 @app.errorhandler(404)
 def pageNotFount(error):
-    db = get_db()
-    database = FDatabase(db)
     return render_template(
         "page404.html",
         title="Страница не найдена",
-        menu=database.get_menu([1, 3]),
-        login=database.get_menu([4, 5]),
+        menu=g.database.get_menu([1, 3]),
+        login=g.database.get_menu([4, 5]),
     )
 
 
-@app.route("/post/<title_post>")
-def show_post(title_post):
-    db = get_db()
-    database = FDatabase(db)
-    post = database.get_post(title_post)
+@app.route("/post/<alias>")
+@login_required
+def show_post(alias):
+    title, post = g.database.get_post(alias)
     if not post:
         abort(401)
     return render_template(
         "post.html",
-        title=title_post,
-        menu=database.get_menu([1, 3]),
-        login=database.get_menu([4, 5]),
+        title=title,
+        menu=g.database.get_menu([1, 3]),
+        login=g.database.get_menu([4, 5]),
         post=post)
+
+
+@app.route("/session")
+def session_obj():
+    data = [1, 2, 3, 4]
+    session.permanent = True
+    if 'data' not in session:
+        session['data'] = data
+    else:
+        session['data'][-1] += 1
+        session.modified = True   # Свойство для принудительной передачи объекта session (вне зависимости изменяемости)
+
+    return f"<p>session['data'] = {session['data']}"
 
 
 @app.teardown_appcontext
