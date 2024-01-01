@@ -1,21 +1,11 @@
 import os.path
 import sqlite3 as sq
-from flask import (
-    Flask,
-    render_template,
-    url_for,
-    request,
-    flash,
-    session,
-    redirect,
-    abort,
-    g,
-)
+from flask import Flask, render_template, url_for, request, flash, session, redirect, abort, g
 from werkzeug.security import generate_password_hash, check_password_hash
 from DatabaseMainMenu import FDatabase
 from UserLogin import UserLogin
 
-from flask_login import LoginManager, login_user, login_required
+from flask_login import LoginManager, login_user, login_required, logout_user, current_user
 
 from uuid import uuid4
 
@@ -35,6 +25,9 @@ app.config['SECRET_KEY'] = str(uuid4())
 app.config.update(dict(DATABASE=os.path.join(app.root_path, "fslite.db")))
 
 login_manager = LoginManager(app)
+login_manager.login_view = 'login'
+login_manager.login_message = 'Требуется авторизоваться для доступа к закрытым страницам'
+login_manager.login_message_category = 'error'
 
 
 @login_manager.user_loader
@@ -75,8 +68,9 @@ def accessing_the_database():
 def index():
     return render_template(
         "index.html", title="Список статей",
-        menu=g.database.get_menu([1, 3]),
-        login=g.database.get_menu([4, 5]),
+        menu=g.database.get_menu([1, 2]),
+        login=g.database.get_menu([3, 4]),
+        logout=g.database.get_menu([5, 6]),
         posts=g.database.get_all_post()
     )
 
@@ -96,42 +90,32 @@ def articleFlask():
     return render_template(
         "add_post.html",
         title="Добавление статьи",
-        menu=g.database.get_menu([1, 3]),
-        login=g.database.get_menu([4, 5]),
-    )
-
-
-@app.route("/contact", methods=["POST", "GET"])  # Если не указать метод POST, то на кнопку отправить будет ошибка 405. Сервер получает запрос, но не может его реализовать
-def contact():
-    if request.method == "POST":
-        if len(request.form["username"]) > 2:
-            flash("Сообщение отправлено", category="success")
-        else:
-            flash("Ошибка отправки", category="error")
-
-    return render_template(
-        "contact.html",
-        title="Обратная связь",
-        menu=g.database.get_menu([1, 3]),
-        login=g.database.get_menu([4, 5])
+        menu=g.database.get_menu([1, 2]),
+        login=g.database.get_menu([3, 4]),
+        logout=g.database.get_menu([5, 6]),
     )
 
 
 @app.route("/login", methods=["POST", "GET"])
 def login():
+    if current_user.is_authenticated:
+        return redirect(url_for("profile_users"))
+
     if request.method == "POST":
         user = g.database.get_user_by_email(request.form['username'])
         if user and check_password_hash(user['psw'], request.form['psw']):
             user_login = UserLogin().create(user)
-            login_user(user_login)
-            return redirect(url_for('index'))
+            rem_me = True if request.form.get('rememberme') else False
+            login_user(user_login, remember=rem_me)
+            return redirect(request.args.get("next") or url_for('profile_users'))
 
         flash("Неверная пара логин/пароль", "error")
     return render_template(
         "login.html",
         title="Авторизация",
-        menu=g.database.get_menu([1, 3]),
-        login=g.database.get_menu([4, 5])
+        menu=g.database.get_menu([1, 2]),
+        login=g.database.get_menu([3, 4]),
+        logout=g.database.get_menu([5, 6]),
     )
 
 
@@ -152,8 +136,9 @@ def register():
     return render_template(
         "sing_up.html",
         title="Регистрация",
-        menu=g.database.get_menu([1, 3]),
-        login=g.database.get_menu([4, 5])
+        menu=g.database.get_menu([1, 2]),
+        login=g.database.get_menu([3, 4]),
+        logout=g.database.get_menu([5, 6]),
     )
 
 
@@ -164,8 +149,9 @@ def profile(username):
     return render_template(
         "profile.html",
         title=f"Профиль пользователя {username}",
-        menu=g.database.get_menu([1, 3]),
-        login=g.database.get_menu([4, 5]),
+        menu=g.database.get_menu([1, 2]),
+        login=g.database.get_menu([3, 4]),
+        logout=g.database.get_menu([5, 6]),
     )
 
 
@@ -174,8 +160,9 @@ def pageNotFount(error):
     return render_template(
         "page404.html",
         title="Страница не найдена",
-        menu=g.database.get_menu([1, 3]),
-        login=g.database.get_menu([4, 5]),
+        menu=g.database.get_menu([1, 2]),
+        login=g.database.get_menu([3, 4]),
+        logout=g.database.get_menu([5, 6]),
     )
 
 
@@ -188,9 +175,30 @@ def show_post(alias):
     return render_template(
         "post.html",
         title=title,
-        menu=g.database.get_menu([1, 3]),
-        login=g.database.get_menu([4, 5]),
+        menu=g.database.get_menu([1, 2]),
+        login=g.database.get_menu([3, 4]),
+        logout=g.database.get_menu([5, 6]),
         post=post)
+
+
+@app.route("/profile_users")
+def profile_users():
+    return render_template(
+        "profile_users.html",
+        title="Профиль",
+        user=g.database.get_user(current_user.get_id()),
+        menu=g.database.get_menu([1, 2]),
+        login=g.database.get_menu([3, 4]),
+        logout=g.database.get_menu([5, 6])
+    )
+
+
+@app.route("/logout")
+@login_required
+def logout():
+    logout_user()
+    flash("Вы вышли из аккаунта", "success")
+    return redirect(url_for("login"))
 
 
 @app.route("/session")
