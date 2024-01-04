@@ -2,8 +2,8 @@ import os.path
 import sqlite3 as sq
 from flask import Flask, render_template, url_for, request, flash, session, redirect, abort, g, make_response
 from werkzeug.security import generate_password_hash, check_password_hash
-from DatabaseMainMenu import FDatabase
-from UserLogin import UserLogin
+from src.database.Database import FDatabase
+from src.model.UserLogin import UserLogin
 
 from flask_login import LoginManager, login_user, login_required, logout_user, current_user
 
