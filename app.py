@@ -1,6 +1,6 @@
 import os.path
 import sqlite3 as sq
-from flask import Flask, render_template, url_for, request, flash, session, redirect, abort, g
+from flask import Flask, render_template, url_for, request, flash, session, redirect, abort, g, make_response
 from werkzeug.security import generate_password_hash, check_password_hash
 from DatabaseMainMenu import FDatabase
 from UserLogin import UserLogin
@@ -15,6 +15,8 @@ DATABASE = os.getenv("DATABASE")
 DEBUG = os.getenv("DEBUG")
 SECRET_KEY = os.getenv("SECRET_KEY")
 
+# Max content length
+MAX_CONTENT_LENGTH = 1024 * 1024
 
 app = Flask(__name__)
 app.config.from_object(__name__)
@@ -191,6 +193,42 @@ def profile_users():
         login=g.database.get_menu([3, 4]),
         logout=g.database.get_menu([5, 6])
     )
+
+
+@app.route("/ava")
+@login_required
+def user_ava():
+    img = current_user.get_avatar(app)
+    if not img:
+        return ""
+
+    h = make_response(img)
+    h.headers["Content-Type"] = "image/png"
+    return h
+
+
+@app.route("/upload", methods=["POST", "GET"])
+@login_required
+def upload():
+    if request.method == "POST":
+        file = request.files['file']
+        print(file.filename)
+        if file and current_user.check_file_png(file.filename):
+            try:
+                img = file.read()
+                res = g.database.update_user_avatar(img, current_user.get_id())
+                if not res:
+                    flash("Ошибка обновления аватара", "error")
+                else:
+                    flash("Аватар успешно загружен", "success")
+            except FileNotFoundError as e:
+                flash("Ошибка чтения из файла")
+                print(f"Ошибка чтения из файла: {e}")
+        else:
+            flash("Ошибка обновления аватара", "error")
+
+    return redirect(url_for("profile_users"))
+
 
 
 @app.route("/logout")

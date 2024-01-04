@@ -75,7 +75,7 @@ class FDatabase:
             if res['count'] > 0:
                 print("Пользователь с таким email уже существует")
                 return False
-            sing_up_req = "INSERT INTO users VALUES (NULL, ?, ?, ?, ?)"
+            sing_up_req = "INSERT INTO users VALUES (NULL, ?, ?, ?, NULL, ?)"
             self.__cur.execute(sing_up_req, (name, email, psw, self.cur_date))
             self.__db.commit()
         except sqlite3.Error as e:
@@ -111,3 +111,18 @@ class FDatabase:
             print(f"Ошибка получения данных из БД: {e}")
 
         return False
+
+    def update_user_avatar(self, avatar, user_id):
+        if not avatar:
+            return False
+
+        try:
+            binary_file = sqlite3.Binary(avatar)
+            update_img = "UPDATE users SET avatar = ? WHERE id = ?"
+            self.__cur.execute(update_img, (binary_file, user_id))
+            self.__db.commit()
+        except sqlite3.Error as e:
+            print(f"Ошибка обновления аватара в БД: {e}")
+            return False
+        return True
+
