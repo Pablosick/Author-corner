@@ -7,6 +7,8 @@ from src.model.UserLogin import UserLogin
 
 from flask_login import LoginManager, login_user, login_required, logout_user, current_user
 
+from forms import LoginForm
+
 from uuid import uuid4
 
 # Configuration WSGI-application
@@ -23,9 +25,9 @@ app.config.from_object(__name__)
 
 # Secret-key for session
 app.config['SECRET_KEY'] = str(uuid4())
-
 app.config.update(dict(DATABASE=os.path.join(app.root_path, "fslite.db")))
 
+# Login-manager and his config
 login_manager = LoginManager(app)
 login_manager.login_view = 'login'
 login_manager.login_message = 'Требуется авторизоваться для доступа к закрытым страницам'
@@ -103,11 +105,12 @@ def login():
     if current_user.is_authenticated:
         return redirect(url_for("profile_users"))
 
-    if request.method == "POST":
-        user = g.database.get_user_by_email(request.form['username'])
-        if user and check_password_hash(user['psw'], request.form['psw']):
+    form = LoginForm()
+    if form.validate_on_submit():
+        user = g.database.get_user_by_email(form.email.data)
+        if user and check_password_hash(user['psw'], form.psw.data):
             user_login = UserLogin().create(user)
-            rem_me = True if request.form.get('rememberme') else False
+            rem_me = form.remember.data
             login_user(user_login, remember=rem_me)
             return redirect(request.args.get("next") or url_for('profile_users'))
 
@@ -118,7 +121,25 @@ def login():
         menu=g.database.get_menu([1, 2]),
         login=g.database.get_menu([3, 4]),
         logout=g.database.get_menu([5, 6]),
+        form=form
     )
+
+    # if request.method == "POST":
+    #     user = g.database.get_user_by_email(request.form['username'])
+    #     if user and check_password_hash(user['psw'], request.form['psw']):
+    #         user_login = UserLogin().create(user)
+    #         rem_me = True if request.form.get('rememberme') else False
+    #         login_user(user_login, remember=rem_me)
+    #         return redirect(request.args.get("next") or url_for('profile_users'))
+    #
+    #     flash("Неверная пара логин/пароль", "error")
+    # return render_template(
+    #     "login.html",
+    #     title="Авторизация",
+    #     menu=g.database.get_menu([1, 2]),
+    #     login=g.database.get_menu([3, 4]),
+    #     logout=g.database.get_menu([5, 6]),
+    # )
 
 
 @app.route("/signup", methods=["POST", "GET"])
@@ -228,7 +249,6 @@ def upload():
             flash("Ошибка обновления аватара", "error")
 
     return redirect(url_for("profile_users"))
-
 
 
 @app.route("/logout")
