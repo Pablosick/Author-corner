@@ -1,0 +1,17 @@
+{% extends 'admin/base_admin.html' %}
+
+{% block content %}
+{{ super() }}
+<h1>{{title}}</h1>
+<ul class="list-posts">
+    {% if list_user_posts %}
+    {% for p in list_user_posts %}
+    <li>
+        <p class="title">{{p.Posts.title}}</p>
+    </li>
+    {% endfor %}
+    {% else %}
+    <p class="null_posts">Пользователь еще не опубликовал ни одной записи</p>
+    {% endif %}
+</ul>
+{% endblock %}

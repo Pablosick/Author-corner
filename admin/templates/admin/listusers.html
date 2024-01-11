@@ -6,8 +6,9 @@
 <ul class="list-posts">
 {% for p in list %}
 <li>
-<p class="title">{{p.name}}</p>
-<p class="annonce">{{ p.email }}</p>
+    <p class="title">{{p.name}}</p>
+    <p class="annonce">{{ p.email }}</p>
+    <p class="annonce"><a href="{{ url_for('.user_posts', id=p.id) }}">Опубликованные статьи</a></p>
 </li>
 {% endfor %}
 </ul>

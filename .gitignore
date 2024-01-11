@@ -12,3 +12,12 @@ __init__.py
 
 #.env
 .env
+
+#db_instance
+instance
+
+#test class with requests
+raw_request.py
+
+#auxiliary file
+create_db.sql

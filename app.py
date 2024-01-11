@@ -1,11 +1,10 @@
 import os.path
-import sqlite3 as sq
-from flask import Flask, render_template, url_for, request, flash, session, redirect, abort, g, make_response
+from flask import Flask, render_template, url_for, request, flash, session, redirect, abort, make_response
 from werkzeug.security import generate_password_hash, check_password_hash
-from src.database.Database import FDatabase
 from src.model.UserLogin import UserLogin
+from src.model.Database import db, Users, Posts
+from src.model.forms import LoginForm
 from flask_login import LoginManager, login_user, login_required, logout_user, current_user
-from forms import LoginForm
 from admin.admin import admin
 from uuid import uuid4
 
@@ -34,49 +33,24 @@ login_manager.login_view = 'login'
 login_manager.login_message = 'Требуется авторизоваться для доступа к закрытым страницам'
 login_manager.login_message_category = 'error'
 
+# Conf SqlAlchemy
+app.config["SQLALCHEMY_DATABASE_URI"] = 'sqlite:///article.db'
+db.init_app(app)
+
 
 @login_manager.user_loader
 def load_user(user_id):
     print("load user")
-    return UserLogin().from_db(user_id, g.database)
-
-
-def connect_db():
-    conn = sq.connect(app.config["DATABASE"])
-    conn.row_factory = sq.Row
-    return conn
-
-
-def create_db():
-    """Вспомогательная функция для создания таблиц БД. Чтение SQL запросов из файла"""
-    db = connect_db()
-    with app.open_resource("sq_db.sql", mode="r") as f:
-        db.cursor().executescript(f.read())
-    db.commit()
-    db.close()
-
-
-def get_db():
-    """Соединение с БД, если оно еще не установлено"""
-    if not hasattr(g, "link_db"):
-        g.link_db = connect_db()
-    return g.link_db
-
-
-@app.before_request
-def accessing_the_database():
-    g.db = get_db()
-    g.database = FDatabase(g.db)
+    return UserLogin().from_db(user_id, user=Users)
 
 
 @app.route("/")
 def index():
+    posts = Posts.query.all()
     return render_template(
-        "index.html", title="Список статей",
-        menu=g.database.get_menu([1, 2]),
-        login=g.database.get_menu([3, 4]),
-        logout=g.database.get_menu([5, 6]),
-        posts=g.database.get_all_post()
+        "index.html",
+        title="Список статей",
+        posts=posts
     )
 
 
@@ -85,20 +59,24 @@ def index():
 def articleFlask():
     if request.method == "POST":
         if len(request.form["name"]) > 4 and len(request.form["post"]) > 10:
-            res = g.database.add_post(request.form["name"], request.form["post"], request.form["url"])
-            if not res:
-                flash("Ошибка добавления статьи", category="error")
-            else:
+            try:
+                post = Posts(title=request.form['name'],
+                             text=request.form['post'],
+                             url=request.form['url'],
+                             user_id=int(current_user.get_id()))
+                db.session.add(post)
+                db.session.commit()
                 flash("Статья добавлена успешно", category="success")
+            except Exception as e:
+                db.session.rollback()
+                print("Ошибка чтения из БД: ", e)
+                flash("Ошибка добавления статьи", category="error")
         else:
             flash("Ошибка добавления статьи", category="error")
 
     return render_template(
         "add_post.html",
         title="Добавление статьи",
-        menu=g.database.get_menu([1, 2]),
-        login=g.database.get_menu([3, 4]),
-        logout=g.database.get_menu([5, 6]),
     )
 
 
@@ -109,8 +87,8 @@ def login():
 
     form = LoginForm()
     if form.validate_on_submit():
-        user = g.database.get_user_by_email(form.email.data)
-        if user and check_password_hash(user['psw'], form.psw.data):
+        user = Users.query.filter_by(email=form.email.data).first()
+        if user and check_password_hash(user.psw, form.psw.data):
             user_login = UserLogin().create(user)
             rem_me = form.remember.data
             login_user(user_login, remember=rem_me)
@@ -120,9 +98,6 @@ def login():
     return render_template(
         "login.html",
         title="Авторизация",
-        menu=g.database.get_menu([1, 2]),
-        login=g.database.get_menu([3, 4]),
-        logout=g.database.get_menu([5, 6]),
         form=form
     )
 
@@ -133,33 +108,22 @@ def register():
         if (len(request.form["firstname"]) > 4 and len(request.form["email"]) > 4
                 and len(request.form["psw"]) > 4 and request.form["repeat_psw"] == request.form["psw"]):
             hash_psw = generate_password_hash(request.form["psw"])
-            res = g.database.user_registration(request.form["firstname"], request.form["email"], hash_psw)
-            if res:
+            try:
+                user = Users(name=request.form["firstname"],
+                             email=request.form["email"],
+                             psw=hash_psw)
+                db.session.add(user)
+                db.session.commit()
                 flash("Вы успешно зарегистрированы", "success")
-                return redirect(url_for("login"))
-            else:
+            except Exception as e:
+                print("Ошибка добавления данных в БД", e)
+                db.session.rollback()
                 flash("Ошибка при добавлении в БД", "error")
         else:
-            flash("Ошибка введенных данных", "error")
+            flash("Ошибка введенных данных. Поля должны содержать > 4 символов", "error")
     return render_template(
         "sing_up.html",
         title="Регистрация",
-        menu=g.database.get_menu([1, 2]),
-        login=g.database.get_menu([3, 4]),
-        logout=g.database.get_menu([5, 6]),
-    )
-
-
-@app.route("/profile/<username>")
-def profile(username):
-    if "userLogged" not in session or session["userLogged"] != username:
-        abort(401)  # Unauthorized  user (Прерывание запроса)
-    return render_template(
-        "profile.html",
-        title=f"Профиль пользователя {username}",
-        menu=g.database.get_menu([1, 2]),
-        login=g.database.get_menu([3, 4]),
-        logout=g.database.get_menu([5, 6]),
     )
 
 
@@ -168,36 +132,28 @@ def pageNotFount(error):
     return render_template(
         "page404.html",
         title="Страница не найдена",
-        menu=g.database.get_menu([1, 2]),
-        login=g.database.get_menu([3, 4]),
-        logout=g.database.get_menu([5, 6]),
     )
 
 
 @app.route("/post/<alias>")
 @login_required
 def show_post(alias):
-    title, post = g.database.get_post(alias)
-    if not post:
+    post_data = Posts.query.filter_by(url=alias).first()
+    if not post_data:
         abort(401)
     return render_template(
         "post.html",
-        title=title,
-        menu=g.database.get_menu([1, 2]),
-        login=g.database.get_menu([3, 4]),
-        logout=g.database.get_menu([5, 6]),
-        post=post)
+        title=post_data.title,
+        post=post_data.text)
 
 
 @app.route("/profile_users")
 def profile_users():
+    user = Users.query.filter_by(id=current_user.get_id()).first()
     return render_template(
         "profile_users.html",
         title="Профиль",
-        user=g.database.get_user(current_user.get_id()),
-        menu=g.database.get_menu([1, 2]),
-        login=g.database.get_menu([3, 4]),
-        logout=g.database.get_menu([5, 6])
+        user=user,
     )
 
 
@@ -222,7 +178,9 @@ def upload():
         if file and current_user.check_file_png(file.filename):
             try:
                 img = file.read()
-                res = g.database.update_user_avatar(img, current_user.get_id())
+                res = Users.query.filter_by(id=current_user.get_id()).first()
+                res.avatar = img
+                db.session.commit()
                 if not res:
                     flash("Ошибка обновления аватара", "error")
                 else:
@@ -255,13 +213,6 @@ def session_obj():
         session.modified = True   # Свойство для принудительной передачи объекта session (вне зависимости изменяемости)
 
     return f"<p>session['data'] = {session['data']}"
-
-
-@app.teardown_appcontext
-def close_db(error):
-    """Закрываем соединение с БД, если оно было установленно"""
-    if hasattr(g, "link_db"):
-        g.link_db.close()
 
 
 if __name__ == "__main__":

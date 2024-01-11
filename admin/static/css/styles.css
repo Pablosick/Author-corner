@@ -3,7 +3,7 @@ html, body {
 	height: 100%;
 	margin: 0;
 	padding: 0;
-	background: #7ca0d6;
+	font-family: 'Arial'
 }
 
 .clear {clear: both;}
@@ -16,6 +16,7 @@ html, body {
 	color: #FF4040;
 }
 
+
 .wnd_dlg_back {
 	z-index: 9999;
 	position: absolute;
@@ -27,6 +28,7 @@ html, body {
 	-moz-border-radius: 20px;
 	border-radius: 20px;
 }
+
 .wnd_dlg_back.login_wnd {
 	position: absolute;
 	left: 50%;
@@ -42,30 +44,35 @@ div.login {
 	height: 175px;
 	padding: 20px;
 	color: #ffffff;
-	background: #3736ff38;
+	background: #134afa;
 	border: 2px solid #d5d8b2;
 	-webkit-border-radius: 20px;
 	-moz-border-radius: 20px;
 	border-radius: 20px;
 }
+
 div.login p {
 	margin: 0 0 10px 0;
 }
+
 div.login p a {
 	color: #777;
 }
+
 div.login .title {
 	text-align: center;
 	color: #fff;
 	font-size: 24px;
 	margin-bottom: 40px;
 }
+
 .login_input {
 	font-size: 16px;
 	width: 100%;
 	background: #041B40;
 	color: #fff;
 }
+
 .login_button {
 	color: #444;
 	margin-top: 10px;
@@ -81,13 +88,16 @@ div.login .title {
 
 .flash {
 	padding: 10px;
-	color: #444;
+	color: #000;
 	margin: -30px 0 10px 0;
+	background: red;
 }
+
 .flash.success {
 	border: 1px solid #21DB56;
 	background: #AEFFC5;
 }
+
 .flash.error {
 	border: 1px solid #FF4343;
 	background: #FF9C9C;
@@ -103,18 +113,21 @@ ul.mainmenu {
 	font-size: 20px;
 	overflow: hidden;
 }
+
 ul.mainmenu li {
 	float: left;
-	margin: 8px 40px 0 50px;
+	margin: 18px 40px 0 50px;
 }
+
 ul.mainmenu li.last {float: right;}
 
 ul.mainmenu li a {
 	color: #fefefe;
 	text-decoration: none;
 }
+
 ul.mainmenu li a:hover {
-	color: #777;
+	color: #000000;
 }
 
 ul.list-posts {
@@ -123,17 +136,31 @@ ul.list-posts {
 	padding: 0;
 	max-width: 600px;
 }
+
 ul.list-posts li {
 	margin: 20px 0 0 0;
 	border: 1px solid #eee;
 	background: #a9a9a9;
 }
+
 ul.list-posts .title {
 	margin: 0;
 	padding: 5px;
 	background: #30537478;
 }
+
 ul.list-posts .annonce {
 	margin: 0;
 	padding: 10px 5px 10px 5px;
+}
+
+ul.list-posts .null_posts {
+	margin: 0;
+	padding: 5px;
+	background: #C40752;
+}
+
+ul.mainmenu li.log{
+	float: right;
+	margin: 18px 40px 0 50px;
 }

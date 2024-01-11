@@ -5,14 +5,14 @@
 <title>{{ title }}</title>
 </head>
 <body>
-{% if menu -%}
+{% if menu %}
 	<ul class="mainmenu">
-	{% for p in menu %}
-	<li><a href="{{ url_for(p.url) }}">{{p.title}}</a></li>
-	{% endfor %}
+		<li><a href="{{ url_for('.list_pubs') }}">Список статей</a></li>
+		<li><a href="{{ url_for('.list_users') }}">Список пользователей</a></li>
+		<li class="log"><a href="{{ url_for('.logout') }}">Выйти</a></li>
 	</ul>
+{% endif %}
 	<div class="clear"></div>
-{%- endif -%}
 <div class="content">
 {% block content -%}
 {% endblock %}
