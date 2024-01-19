@@ -14,4 +14,6 @@ ENV PORT 5000
 
 EXPOSE $PORT
 
+VOLUME ["/app/instance/"]
+
 CMD ["flask", "run", "--host=0.0.0.0"]

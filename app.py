@@ -34,8 +34,11 @@ login_manager.login_message = 'Требуется авторизоваться �
 login_manager.login_message_category = 'error'
 
 # Conf SqlAlchemy
-app.config["SQLALCHEMY_DATABASE_URI"] = 'sqlite:///article.db'
+app.config["SQLALCHEMY_DATABASE_URI"] = os.getenv("DATABASE_URI")
+# app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///article.db"
 db.init_app(app)
+with app.app_context():
+    db.create_all()
 
 
 @login_manager.user_loader

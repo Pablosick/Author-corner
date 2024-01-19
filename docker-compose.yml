@@ -1,0 +1,20 @@
+version: '3'
+
+services:
+  web-server:
+    build: .
+    image: author-corner_backbone:v1
+    container_name: flask_app
+    volumes:
+      - usr:/app/instance/
+    environment:
+      - DATABASE = "/tmp/fslite.db"
+      - DEBUG = True
+      - SECRET_KEY = "5gR2k8kngo0usagPZ3"
+      - DATABASE_URI = "sqlite:///article.db"
+    ports:
+      - "5000:5000"
+    restart: unless-stopped
+
+volumes:
+  usr:
