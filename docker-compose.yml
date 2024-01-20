@@ -8,10 +8,10 @@ services:
     volumes:
       - usr:/app/instance/
     environment:
-      - DATABASE = "/tmp/fslite.db"
-      - DEBUG = True
-      - SECRET_KEY = "5gR2k8kngo0usagPZ3"
-      - DATABASE_URI = "sqlite:///article.db"
+      - DATABASE="/tmp/fslite.db"
+      - DEBUG =True
+      - SECRET_KEY="5gR2k8kngo0usagPZ3"
+      - DATABASE_URI="sqlite:///article.db"
     ports:
       - "5000:5000"
     restart: unless-stopped
